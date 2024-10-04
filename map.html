@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Excel and Get Coordinates</title>
+</head>
+<body>
+    <h1>Upload File Excel Kecamatan dan Dapatkan Koordinat</h1>
+
+    <!-- Form untuk upload file -->
+    <input type="file" id="upload" />
+    <button onclick="processFile()">Proses File</button>
+
+    <p id="status"></p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+
+    <script>
+       async function getCoordinates(kecamatan) {
+            // Menambahkan "Kalimantan Tengah" ke query pencarian
+            const query = `${kecamatan}, Kalimantan Tengah`;
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.length > 0) {
+                return {
+                    latitude: data[0].lat,
+                    longitude: data[0].lon
+                };
+            } else {
+                return {
+                    latitude: 'Tidak ditemukan',
+                    longitude: 'Tidak ditemukan'
+                };
+            }
+        }
+
+        function processFile() {
+            const fileInput = document.getElementById('upload').files[0];
+            
+            if (!fileInput) {
+                alert("Silakan unggah file terlebih dahulu.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function (event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                let results = [];
+                for (let i = 0; i < rows.length; i++) {
+                    let kecamatan = rows[i][0];
+                    let coords = await getCoordinates(kecamatan);
+
+                    results.push({
+                        Kecamatan: kecamatan,
+                        Latitude: coords.latitude,
+                        Longitude: coords.longitude
+                    });
+                }
+
+                // Tampilkan status selesai
+                document.getElementById('status').innerHTML = "Proses selesai, menyiapkan file untuk diunduh.";
+
+                // Convert hasil ke Excel
+                const worksheet = XLSX.utils.json_to_sheet(results);
+                const newWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWorkbook, worksheet, "Koordinat Kecamatan");
+
+                // Simpan file
+                XLSX.writeFile(newWorkbook, "Hasil_Koordinat.xlsx");
+            };
+
+            reader.readAsArrayBuffer(fileInput);
+        }
+    </script>
+</body>
+</html>
