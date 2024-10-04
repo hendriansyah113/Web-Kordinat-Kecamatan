@@ -1,0 +1,1 @@
+web ini berfungsi untuk mendapatkan kordinat kecamatan di kalimantan tengah. Gunakan file excel dengan list kecamatan dan upload ke web maka secara otomatis akan tampil excel baru deengan data kordinatnya.
